@@ -15,7 +15,7 @@ limit_running_time = 2 * 60 * 60
 
 poll_time = 1.0
 
-blacklisted_processes = ["leagueoflegends.exe","python3.5ltsdKit.WebContenterionServicervicey","AppleIDAuthAgent"]
+blacklisted_processes = ["League of Legends.exe","chrome.exe"]
 
 class Window(QWidget):
     
