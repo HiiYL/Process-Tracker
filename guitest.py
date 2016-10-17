@@ -4,7 +4,7 @@ import datetime
 
 import psutil, time
 from PyQt5.QtWidgets import (QWidget, QToolTip, 
-    QPushButton,QVBoxLayout, QApplication, QLabel)
+    QPushButton,QVBoxLayout, QApplication, QLabel,QLineEdit)
 from PyQt5.QtGui import QFont    
 from PyQt5 import QtCore
 
@@ -34,6 +34,20 @@ class Window(QWidget):
 
       self._timeLeftLabel = QLabel("Time Left: " + str(datetime.timedelta(seconds=limit_running_time - total_running_time)))
       vbox.addWidget(self._timeLeftLabel)
+
+      
+
+      # qle = QLineEdit("test")
+      # vbox.addWidget(qle)
+
+
+      # qle = QLineEdit(self)
+      # vbox.addWidget(qle)
+
+      # qle = QLineEdit(self)
+      # vbox.addWidget(qle)
+
+
       
       btn = QPushButton('Start Polling', self)
       btn.setToolTip('This is a <b>QPushButton</b> widget')
