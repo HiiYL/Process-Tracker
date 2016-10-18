@@ -11,11 +11,13 @@ from PyQt5 import QtCore
 
 
 total_running_time = 0.0
-limit_running_time = 2 * 60 * 60
+limit_running_time = 0 * 60 * 60
 
 poll_time = 1.0
 
-blacklisted_processes = ["leagueoflegends.exe","python3.5ltsdKit.WebContenterionServicervicey","AppleIDAuthAgent"]
+blacklisted_processes = ["leagueoflegends.exe"]
+
+process_to_terminate = ["lol.exe"]
 
 class Window(QWidget):
     
@@ -48,14 +50,12 @@ class Window(QWidget):
       # vbox.addWidget(qle)
 
 
-      
       btn = QPushButton('Start Polling', self)
       btn.setToolTip('This is a <b>QPushButton</b> widget')
       btn.resize(btn.sizeHint())
       btn.move(50, 50)
       btn.clicked.connect(self.handleButton)
       vbox.addWidget(btn)
-
 
 
       self.setLayout(vbox)    
@@ -76,11 +76,12 @@ class Window(QWidget):
     self._timer.setInterval(poll_time * 1000)
     self._timer.timeout.connect(self.pollProcesses)
     self._timer.start()
+
+
   def pollProcesses(self):
     print("Polling...")
     for proc in psutil.process_iter():
       try:
-        # print("Processing : " + proc.name() + "\r", end=" ")
         if(proc.name() in blacklisted_processes):
           global total_running_time, poll_time
           total_running_time += poll_time
@@ -88,6 +89,14 @@ class Window(QWidget):
           self.updateUI()
       except psutil.NoSuchProcess:
         continue
+
+    if total_running_time >= limit_running_time:
+      for proc in psutil.process_iter():
+        try:
+          if(proc.name() in process_to_terminate):
+            proc.terminate()
+        except psutil.NoSuchProcess:
+          continue
         
         
 if __name__ == '__main__':
