@@ -15,7 +15,7 @@ limit_running_time = 0 * 60 * 60
 
 poll_time = 1.0
 
-blacklisted_processes = ["leagueoflegends.exe"]
+blacklisted_processes = ["League of Legends.exe"]
 
 process_to_terminate = ["lol.exe"]
 
