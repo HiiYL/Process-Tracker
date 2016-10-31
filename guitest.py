@@ -1,6 +1,6 @@
 ###
 # To build:
-# pyinstaller --paths C:\Users\yongl\AppData\Local\Programs\Python\Python35-32\Lib\site-packages\PyQt5\Qt\bin guitest.py
+# pyinstaller --paths C:\Users\yongl\AppData\Local\Programs\Python\Python35-32\Lib\site-packages\PyQt5\Qt\bin --onefile guitest.py
 
 
 
@@ -17,7 +17,7 @@ from PyQt5 import QtCore,QtGui
 import pickledb
 
 date_today = time.strftime("%d/%m/%Y")
-blacklisted_processes = ["League of Legends.exe", "Overwatch.exe"]
+blacklisted_processes = ["League of Legends.exe"]
 process_to_terminate = ["lol.exe", "Overwatch.exe"]
 
 class SystemTrayIcon(QSystemTrayIcon):
@@ -75,6 +75,7 @@ class Window(QWidget):
 
       self.tray_icon = SystemTrayIcon(QtGui.QIcon('icon.jpg'), self)
       self.tray_icon.show()
+      self.startPolling()
       self.show()
       # self.raise_()
 
@@ -83,6 +84,9 @@ class Window(QWidget):
     self._timeLeftLabel.setText("Time Left: " + str(datetime.timedelta(seconds=self.limit_running_time - self.total_running_time)))
 
   def handleButton(self):
+    self.startPolling()
+
+  def startPolling(self):
     self._active = True
     self._timer = QtCore.QTimer(self)
     self._timer.setInterval(self.poll_time * 1000)
