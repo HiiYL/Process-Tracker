@@ -4,26 +4,39 @@ import datetime
 
 import psutil, time
 from PyQt5.QtWidgets import (QWidget, QToolTip, 
-    QPushButton,QVBoxLayout, QApplication, QLabel,QLineEdit)
-from PyQt5.QtGui import QFont    
-from PyQt5 import QtCore
+    QPushButton,QVBoxLayout, QApplication, QLabel,QLineEdit, QSystemTrayIcon, QMenu)
+from PyQt5.QtGui import QFont  
+from PyQt5 import QtCore,QtGui
 
+import pickledb
 
-
-total_running_time = 0.0
-limit_running_time = 0 * 60 * 60
-
-poll_time = 1.0
-
-blacklisted_processes = ["League of Legends.exe"]
-
+date_today = time.strftime("%d/%m/%Y")
+blacklisted_processes = ["League of Legends.exe", "Activity Monitor"]
 process_to_terminate = ["lol.exe"]
 
+class SystemTrayIcon(QSystemTrayIcon):
+
+    def __init__(self, icon, parent=None):
+        super(SystemTrayIcon, self).__init__(icon, parent)
+        menu = QMenu(parent)
+        exitAction = menu.addAction("Exit")
+        exitAction.triggered.connect(parent.close)
+        self.setContextMenu(menu)
+
 class Window(QWidget):
+  limit_running_time = 3 * 60 * 60
+  total_running_time = 0.0
+  poll_time = 1.0
+  db = pickledb.load('example.db', False)
     
   def __init__(self):
       super().__init__()
       self.initUI()
+
+      if(self.db.get(date_today) != None):
+        self.total_running_time = self.db.get(date_today)
+      else:
+        self.db.set(date_today, self.total_running_time)
 
   def initUI(self):
       
@@ -34,20 +47,9 @@ class Window(QWidget):
 
       vbox = QVBoxLayout()
 
-      self._timeLeftLabel = QLabel("Time Left: " + str(datetime.timedelta(seconds=limit_running_time - total_running_time)))
+      self._timeLeftLabel = QLabel("Time Left: " + str(datetime.timedelta(seconds=self.limit_running_time - self.total_running_time)))
+
       vbox.addWidget(self._timeLeftLabel)
-
-      
-
-      # qle = QLineEdit("test")
-      # vbox.addWidget(qle)
-
-
-      # qle = QLineEdit(self)
-      # vbox.addWidget(qle)
-
-      # qle = QLineEdit(self)
-      # vbox.addWidget(qle)
 
 
       btn = QPushButton('Start Polling', self)
@@ -63,44 +65,53 @@ class Window(QWidget):
       self.setGeometry(300, 300, 300, 200)
       self.setWindowTitle('Process Tracker')
       self._active = False
+
+
+      self.tray_icon = SystemTrayIcon(QtGui.QIcon('icon.jpg'), self)
+      self.tray_icon.show()
       self.show()
-      self.raise_()
+      # self.raise_()
 
   def updateUI(self):
     print("Update Called!")
-    self._timeLeftLabel.setText("Time Left: " + str(datetime.timedelta(seconds=limit_running_time - total_running_time)))
+    self._timeLeftLabel.setText("Time Left: " + str(datetime.timedelta(seconds=self.limit_running_time - self.total_running_time)))
 
   def handleButton(self):
     self._active = True
     self._timer = QtCore.QTimer(self)
-    self._timer.setInterval(poll_time * 1000)
+    self._timer.setInterval(self.poll_time * 1000)
     self._timer.timeout.connect(self.pollProcesses)
     self._timer.start()
 
 
   def pollProcesses(self):
     print("Polling...")
-    for proc in psutil.process_iter():
-      try:
-        if(proc.name() in blacklisted_processes):
-          global total_running_time, poll_time
-          total_running_time += poll_time
-          print(total_running_time)
-          self.updateUI()
-      except psutil.NoSuchProcess:
-        continue
-
-    if total_running_time >= limit_running_time:
+    if self.total_running_time >= self.limit_running_time:
+      print("Attempting to terminate")
       for proc in psutil.process_iter():
         try:
           if(proc.name() in process_to_terminate):
-            proc.terminate()
+            print("Found Proc to Terminate")
+            #proc.terminate()
+            proc.kill()
         except psutil.NoSuchProcess:
           continue
+    else:
+      for proc in psutil.process_iter():
+        try:
+          if(proc.name() in blacklisted_processes):
+            self.total_running_time += self.poll_time
+            self.updateUI()
+            self.db.set(date_today, self.total_running_time)
+            self.db.dump()
+            break
+        except psutil.NoSuchProcess:
+          continue
+
+
         
         
 if __name__ == '__main__':
-    
     app = QApplication(sys.argv)
     ex = Window()
     sys.exit(app.exec_())
