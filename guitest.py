@@ -1,3 +1,9 @@
+###
+# To build:
+# pyinstaller --paths C:\Users\yongl\AppData\Local\Programs\Python\Python35-32\Lib\site-packages\PyQt5\Qt\bin guitest.py
+
+
+
 import sys
 
 import datetime
@@ -11,8 +17,8 @@ from PyQt5 import QtCore,QtGui
 import pickledb
 
 date_today = time.strftime("%d/%m/%Y")
-blacklisted_processes = ["League of Legends.exe", "Activity Monitor"]
-process_to_terminate = ["lol.exe"]
+blacklisted_processes = ["League of Legends.exe", "Overwatch.exe"]
+process_to_terminate = ["lol.exe", "Overwatch.exe"]
 
 class SystemTrayIcon(QSystemTrayIcon):
 
@@ -87,11 +93,10 @@ class Window(QWidget):
   def pollProcesses(self):
     print("Polling...")
     if self.total_running_time >= self.limit_running_time:
-      print("Attempting to terminate")
       for proc in psutil.process_iter():
         try:
           if(proc.name() in process_to_terminate):
-            print("Found Proc to Terminate")
+            print("Found Proc to Terminate : " + proc.name())
             #proc.terminate()
             proc.kill()
         except psutil.NoSuchProcess:
