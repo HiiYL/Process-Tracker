@@ -1,6 +1,6 @@
 ###
 # To build:
-# pyinstaller --paths C:\Users\yongl\AppData\Local\Programs\Python\Python35-32\Lib\site-packages\PyQt5\Qt\bin --onefile guitest.py
+# pyinstaller --paths C:\Users\yongl\AppData\Local\Programs\Python\Python35-32\Lib\site-packages\PyQt5\Qt\bin --onefile --icon=icon.ico guitest.py -w
 
 
 
@@ -10,18 +10,20 @@ import datetime
 
 import psutil, time
 from PyQt5.QtWidgets import (QWidget, QToolTip, 
-    QPushButton,QVBoxLayout, QApplication, QLabel,QLineEdit, QSystemTrayIcon, QMenu)
+    QPushButton,QVBoxLayout, QApplication, QLabel,QLineEdit, QSystemTrayIcon, QMenu, QCheckBox)
 from PyQt5.QtGui import QFont  
 from PyQt5 import QtCore,QtGui
+from PyQt5.QtCore import QSettings
 
 import pickledb
 
 date_today = time.strftime("%d/%m/%Y")
-blacklisted_processes = ["League of Legends.exe"]
+blacklisted_processes = ["League of Legends.exe", "chrome.exe"]
 process_to_terminate = ["lol.exe", "Overwatch.exe"]
 
-class SystemTrayIcon(QSystemTrayIcon):
+RUN_PATH = "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run"
 
+class SystemTrayIcon(QSystemTrayIcon):
     def __init__(self, icon, parent=None):
         super(SystemTrayIcon, self).__init__(icon, parent)
         menu = QMenu(parent)
@@ -29,7 +31,7 @@ class SystemTrayIcon(QSystemTrayIcon):
         exitAction.triggered.connect(parent.close)
         self.setContextMenu(menu)
 
-class Window(QWidget):
+class MainWidget(QWidget):
   limit_running_time = 3 * 60 * 60
   total_running_time = 0.0
   poll_time = 1.0
@@ -44,19 +46,35 @@ class Window(QWidget):
       else:
         self.db.set(date_today, self.total_running_time)
 
-  def initUI(self):
-      
-      QToolTip.setFont(QFont('SansSerif', 10))
-      
-      self.setToolTip('This is a <b>QWidget</b> widget')
+  def closeEvent(self, event):
+      print("User has clicked the red x on the main window")
+      if self.checkbox.isChecked():
+        print(sys.argv[0]);
+        self.settings.setValue("MainWidget",sys.argv[0]);
+      else:
+        self.settings.remove("MainWidget");
+      self.hide()
+      self.tray_icon.show() #thanks @mojo
+      event.ignore()
 
+  def iconActivated(self, reason):
+    print("icon activated!")
+    if reason in (QSystemTrayIcon.Trigger, QSystemTrayIcon.DoubleClick):
+      print("SHOW!")
+      self.show()
+    elif reason == QSystemTrayIcon.MiddleClick:
+      self.showMessage()
+
+  def initUI(self):
+      QToolTip.setFont(QFont('SansSerif', 10))
+      self.setToolTip('This is a <b>QWidget</b> widget')
+      self.settings = QSettings(RUN_PATH, QSettings.NativeFormat)
 
       vbox = QVBoxLayout()
-
+      header_label = QLabel("Process Tracker")
+      vbox.addWidget(header_label)
       self._timeLeftLabel = QLabel("Time Left: " + str(datetime.timedelta(seconds=self.limit_running_time - self.total_running_time)))
-
       vbox.addWidget(self._timeLeftLabel)
-
 
       btn = QPushButton('Start Polling', self)
       btn.setToolTip('This is a <b>QPushButton</b> widget')
@@ -66,17 +84,21 @@ class Window(QWidget):
       vbox.addWidget(btn)
 
 
+      self.checkbox = QCheckBox("Boot at Startup", self)
+      # Check if value exists in registry
+      self.checkbox.setChecked(self.settings.contains("MainWidget"))
+      vbox.addWidget(self.checkbox)
+
+
       self.setLayout(vbox)    
-      
       self.setGeometry(300, 300, 300, 200)
       self.setWindowTitle('Process Tracker')
       self._active = False
 
-
-      self.tray_icon = SystemTrayIcon(QtGui.QIcon('icon.jpg'), self)
+      self.tray_icon = SystemTrayIcon(QtGui.QIcon('icon.ico'), self)
       self.tray_icon.show()
+      self.tray_icon.activated.connect(self.iconActivated)
       self.startPolling()
-      self.show()
       # self.raise_()
 
   def updateUI(self):
@@ -101,9 +123,9 @@ class Window(QWidget):
         try:
           if(proc.name() in process_to_terminate):
             print("Found Proc to Terminate : " + proc.name())
-            #proc.terminate()
+            proc.terminate()
             proc.kill()
-        except psutil.NoSuchProcess:
+        except: #psutil.NoSuchProcess:
           continue
     else:
       for proc in psutil.process_iter():
@@ -112,15 +134,13 @@ class Window(QWidget):
             self.total_running_time += self.poll_time
             self.updateUI()
             self.db.set(date_today, self.total_running_time)
-            self.db.dump()
+            #self.db.dump()
             break
         except psutil.NoSuchProcess:
           continue
-
-
-        
         
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    ex = Window()
+    w = MainWidget()
+    w.show()
     sys.exit(app.exec_())
