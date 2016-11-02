@@ -10,7 +10,7 @@ import datetime
 
 import psutil, time
 from PyQt5.QtWidgets import (QWidget, QToolTip, 
-    QPushButton,QVBoxLayout, QApplication, QLabel,QLineEdit, QSystemTrayIcon, QMenu, QCheckBox)
+    QPushButton,QVBoxLayout, QApplication, QLabel,QLineEdit, QSystemTrayIcon, QMenu, QCheckBox, QInputDialog, QDialog, QMessageBox)
 from PyQt5.QtGui import QFont  
 from PyQt5 import QtCore,QtGui
 from PyQt5.QtCore import QSettings
@@ -18,7 +18,7 @@ from PyQt5.QtCore import QSettings
 import pickledb
 
 date_today = time.strftime("%d/%m/%Y")
-blacklisted_processes = ["League of Legends.exe", "chrome.exe"]
+blacklisted_processes = ["League of Legends.exe", "chrome.exe", "Activity Monitor"]
 process_to_terminate = ["lol.exe", "Overwatch.exe"]
 
 RUN_PATH = "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run"
@@ -30,6 +30,24 @@ class SystemTrayIcon(QSystemTrayIcon):
         exitAction = menu.addAction("Exit")
         exitAction.triggered.connect(parent.close)
         self.setContextMenu(menu)
+
+class Login(QDialog):
+    def __init__(self, parent=None):
+        super(Login, self).__init__(parent)
+        self.textPass = QLineEdit(self)
+        self.textPass.setEchoMode(QLineEdit.Password)
+        self.buttonLogin = QPushButton('Authenticate', self)
+        self.buttonLogin.clicked.connect(self.handleLogin)
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.textPass)
+        layout.addWidget(self.buttonLogin)
+
+    def handleLogin(self):
+        if (self.textPass.text() == 'bar'):
+            self.accept()
+        else:
+            QMessageBox.warning(
+                self, 'Error', 'Bad password')
 
 class MainWidget(QWidget):
   limit_running_time = 3 * 60 * 60
@@ -71,24 +89,21 @@ class MainWidget(QWidget):
       self.settings = QSettings(RUN_PATH, QSettings.NativeFormat)
 
       vbox = QVBoxLayout()
-      header_label = QLabel("Process Tracker")
-      vbox.addWidget(header_label)
       self._timeLeftLabel = QLabel("Time Left: " + str(datetime.timedelta(seconds=self.limit_running_time - self.total_running_time)))
       vbox.addWidget(self._timeLeftLabel)
 
-      btn = QPushButton('Start Polling', self)
-      btn.setToolTip('This is a <b>QPushButton</b> widget')
-      btn.resize(btn.sizeHint())
-      btn.move(50, 50)
-      btn.clicked.connect(self.handleButton)
-      vbox.addWidget(btn)
+      self.toggle_btn = QPushButton('Disable', self)
+      self.toggle_btn.setToolTip('This is a <b>QPushButton</b> widget')
+      self.toggle_btn.resize(self.toggle_btn.sizeHint())
+      self.toggle_btn.move(50, 50)
+      self.toggle_btn.clicked.connect(self.handleButton)
+      vbox.addWidget(self.toggle_btn)
 
 
       self.checkbox = QCheckBox("Boot at Startup", self)
       # Check if value exists in registry
       self.checkbox.setChecked(self.settings.contains("MainWidget"))
       vbox.addWidget(self.checkbox)
-
 
       self.setLayout(vbox)    
       self.setGeometry(300, 300, 300, 200)
@@ -99,14 +114,24 @@ class MainWidget(QWidget):
       self.tray_icon.show()
       self.tray_icon.activated.connect(self.iconActivated)
       self.startPolling()
-      # self.raise_()
+
+
 
   def updateUI(self):
     print("Update Called!")
     self._timeLeftLabel.setText("Time Left: " + str(datetime.timedelta(seconds=self.limit_running_time - self.total_running_time)))
 
   def handleButton(self):
-    self.startPolling()
+    if(self._timer.isActive()):
+      login = Login()
+      login.show()
+      if login.exec_() == QDialog.Accepted:
+        self.toggle_btn.setText("Enable")
+        w.stopPolling()
+    else:
+      self.toggle_btn.setText("Disable")
+      self._timer.start()
+
 
   def startPolling(self):
     self._active = True
@@ -115,10 +140,13 @@ class MainWidget(QWidget):
     self._timer.timeout.connect(self.pollProcesses)
     self._timer.start()
 
+  def stopPolling(self):
+    self._timer.stop()
 
   def pollProcesses(self):
     print("Polling...")
     if self.total_running_time >= self.limit_running_time:
+      # find and kills process in the list process_to_terminate
       for proc in psutil.process_iter():
         try:
           if(proc.name() in process_to_terminate):
@@ -128,19 +156,21 @@ class MainWidget(QWidget):
         except: #psutil.NoSuchProcess:
           continue
     else:
+      # if blacklisted process running, increase running_time
       for proc in psutil.process_iter():
         try:
           if(proc.name() in blacklisted_processes):
             self.total_running_time += self.poll_time
             self.updateUI()
             self.db.set(date_today, self.total_running_time)
-            #self.db.dump()
+            self.db.dump()
             break
-        except psutil.NoSuchProcess:
+        except:
           continue
-        
+
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     w = MainWidget()
     w.show()
+
     sys.exit(app.exec_())

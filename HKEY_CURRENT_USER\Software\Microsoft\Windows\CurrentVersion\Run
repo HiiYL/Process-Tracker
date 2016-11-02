@@ -3,6 +3,6 @@
 <plist version="1.0">
 <dict>
 	<key>MainWidget</key>
-	<string>guitest.py</string>
+	<string>main.py</string>
 </dict>
 </plist>
