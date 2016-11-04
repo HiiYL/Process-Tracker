@@ -16,6 +16,8 @@ Simple tool for monitoring running processes written in Python
 ### Binary Executable ( Windows only )
 Download latest release from releases page, double click to run.
 
+## Screenshots
+![capture](https://cloud.githubusercontent.com/assets/7908951/19999366/e4e00d64-a2ac-11e6-9859-3c4e1ca5fb78.PNG)
 ## Contributing
 1. Fork it!
 2. Create your feature branch: `git checkout -b my-new-feature`
