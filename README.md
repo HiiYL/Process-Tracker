@@ -1,5 +1,5 @@
 # Process Tracker
-Simple tool for monitoring running processes written in Python
+Simple tool for monitoring time spent in an application, written in Python. 
 
 ## Dependencies
  - PyQt5
